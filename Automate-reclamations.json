@@ -1,0 +1,328 @@
+{
+  "name": "Automate-reclamations",
+  "nodes": [
+    {
+      "parameters": {
+        "multipleMethods": true,
+        "httpMethod": [
+          "POST"
+        ],
+        "path": "FormReclam",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -528,
+        -192
+      ],
+      "id": "4e15fd68-e374-4f18-a4d9-112f6c3d29bf",
+      "name": "Recuperation reclamations",
+      "webhookId": "af6d9493-7a53-405b-870f-e2567cf2d6be"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=System prompt :\n\"Tu es un assistant de gestion des réclamations. \nRetourne uniquement un JSON avec priorite, bu_assignee et resume, en plus je veux que tu me retournes un message de reponnse adapte au message que tu as recu. Puis analyse ce contenu de maniere a me ressortir un corpus adapte pour faire du text Analysis et ressortir un World Cloud. Je veux le message de retour en JSON\"\n\nUser message :\n\"Motif : {{ $json.body.type_reclamation }}\nContenu : {{ $json.body.description }}\"  et retourne moi ce JSON apres ton analyse : Retourne uniquement ce JSON :\n{\n  \"priorite\"   : \"P1\" | \"P2\" | \"P3\",\n  \"bu_assignee\": \"Commercial\" | \"Technique\" | \"Facturation\" | \"Juridique\",\n  \"resume\"     : \"résumé\", \n\"reponse: \"reponse au client\",\n\"Corpus\" : \"Corpus pour sentiment analysis\"\n}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        -288,
+        -192
+      ],
+      "id": "a6ff4637-a871-492d-aef8-41cc5f540a40",
+      "name": "Resume message + Reponse_Client + Affiliation BU",
+      "credentials": {
+        "openAiApi": {
+          "id": "DVR8vHe9gbO2Y6zq",
+          "name": "OpenAI account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "function generer_id(date, mail, nom) {\n  const chaine = `${date}${mail}${nom}`;\n  let hash = 0;\n  for (let i = 0; i < chaine.length; i++) {\n    const char = chaine.charCodeAt(i);\n    hash = ((hash << 5) - hash) + char;\n    hash = hash & hash; \n  }\n return \"REC-\" + Math.abs(hash).toString(16).toUpperCase();\n}\nconst id_reclam = generer_id($('Recuperation reclamations').first().json.body.date_soumission, $('Recuperation reclamations').first().json.body.mail_client, $('Recuperation reclamations').first().json.body.nom_client)\nconst items = $input.all();\nconst texte = items[0].json.output[0].content[0].text;\nconst propre = texte.replace(/```json|```/g, \"\").trim();\nconst resultat = JSON.parse(propre);\n\n\nreturn {\n  json: {\n    Id : id_reclam,\n    priorite         : resultat.priorite,\n    bu_assignee      : resultat.bu_assignee,\n    resume           : resultat.resume,\n    reponse_client   : resultat.reponse,\n    corpus : resultat.Corpus,    \n    DG : \"mbargadepaule65@gmail.com\", \n    \n    DGA : \"tchummotchapong@gmail.com\"\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16,
+        -256
+      ],
+      "id": "57ea69ea-ecfb-4c96-b846-73ce860d7e71",
+      "name": "Stage de formatage"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Recuperation reclamations').item.json.body.mail_client }}",
+        "subject": "={{ $('Recuperation reclamations').item.json.body.type_reclamation }}",
+        "emailType": "text",
+        "message": "={{ $json.reponse_client }}",
+        "options": {
+          "bccList": "=",
+          "ccList": "={{ $json.DG }} , {{ $json.DGA }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        320,
+        -400
+      ],
+      "id": "38a95392-733c-494e-b19f-ab0681dae853",
+      "name": "Reponse au Client",
+      "webhookId": "58ca2660-cd65-4fca-8824-e82c97ffcc25",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "4lUfWQWtNbFgpl7l",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1WDMU5dzVMxE6sogJVN5FPiLF9Rxcrk8SIMKe6QEDG7Q",
+          "mode": "list",
+          "cachedResultName": "Traitement reclamations",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WDMU5dzVMxE6sogJVN5FPiLF9Rxcrk8SIMKe6QEDG7Q/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Suivi reclam",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WDMU5dzVMxE6sogJVN5FPiLF9Rxcrk8SIMKe6QEDG7Q/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date_recep_recla": "={{ $('Recuperation reclamations').item.json.body.date_soumission }}",
+            "Type_Client": "={{ $('Recuperation reclamations').item.json.body.type_client }}",
+            "Priorite": "={{ $json.priorite }}",
+            "BU_en_charge": "={{ $json.bu_assignee }}",
+            "Resume": "={{ $json.resume }}",
+            "Corpus": "={{ $json.corpus }}",
+            "Id": "={{ $json.Id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Id",
+              "displayName": "Id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date_recep_recla",
+              "displayName": "Date_recep_recla",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Type_Client",
+              "displayName": "Type_Client",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Priorite",
+              "displayName": "Priorite",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "BU_en_charge",
+              "displayName": "BU_en_charge",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Resume",
+              "displayName": "Resume",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Corpus",
+              "displayName": "Corpus",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        320,
+        -208
+      ],
+      "id": "a9dd5c6c-8fdd-42b5-87f3-911e3ff31a38",
+      "name": "Ajout reclamation a la BD",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "yNR000We0sHuOqrI",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.mail_responsable }},anthonyfotso4@gmail.com",
+        "subject": "={{ $('Recuperation reclamations').item.json.body.type_reclamation }}",
+        "emailType": "text",
+        "message": "=Bonjour Cher(e){{ $json.nom_responsable }}, en votre qualite de Responsable du service {{ $json.bu_assignee }}, nous vous transmettons la reclamation du client {{ $('Recuperation reclamations').item.json.body.nom_client }}, du segment : {{ $('Recuperation reclamations').item.json.body.type_client}} dont voici un bref resume : {{ $('Stage de formatage').item.json.resume }} Bien vouloir mener les diligences necessaires, et faire un retour dans les delais les plus bref.\nMerci, cordialement\n\nLa Direction Marketing",
+        "options": {
+          "bccList": "=",
+          "ccList": "= {{ $('Stage de formatage').item.json.DG }}, {{ $('Stage de formatage').item.json.DGA }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        336,
+        80
+      ],
+      "id": "03ba3379-7714-405a-94d2-661bdcdb8f03",
+      "name": "Notification Resp BU",
+      "webhookId": "58ca2660-cd65-4fca-8824-e82c97ffcc25",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "4lUfWQWtNbFgpl7l",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "function get_responsable_bu(bu_name) {\n  const Resp_BU = [\n    { \"row_number\": 2, \"Nom_BU\": \"Technique\",   \"Responsable\": \"Franck TOHAM\", \"Mail Reponsable\": \"roimanitou73@gmail.com\" },\n    { \"row_number\": 3, \"Nom_BU\": \"Commercial\",  \"Responsable\": \"Suzy MASSU\",     \"Mail Reponsable\": \"massusuzy@gmail.com\" },\n    { \"row_number\": 4, \"Nom_BU\": \"Facturation\", \"Responsable\": \"Yvan WAFO\",      \"Mail Reponsable\": \"wafoyvan16@gmail.com\" },\n    { \"row_number\": 5, \"Nom_BU\": \"Juridique\",   \"Responsable\": \"Georges TIAM\",   \"Mail Reponsable\": \"georges.tiam@gmail.com\" }\n  ];\n\n  const bu = Resp_BU.find(item => item.Nom_BU === $input.first().json.bu_assignee);\n\n  if (!bu) {\n    throw new Error(`BU \"${bu_name}\" introuvable`);\n  }\n\n  return {\n    nom_bu       : bu.Nom_BU,\n    responsable  : bu.Responsable,\n    mail         : bu[\"Mail Reponsable\"]\n  };\n}\n\n// ── Utilisation ──\nconst bu_assignee = $json.bu_assignee; // vient du nœud précédent\n\nconst responsable = get_responsable_bu(bu_assignee);\n\nreturn {\n  json: {\n    ...($json),                          // conserve toutes les données existantes\n    nom_responsable  : responsable.responsable,\n    mail_responsable : responsable.mail\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        80
+      ],
+      "id": "531bbd54-fcd7-4821-8d49-a7e02c47cd30",
+      "name": "Stage de formatage1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Recuperation reclamations": {
+      "main": [
+        [
+          {
+            "node": "Resume message + Reponse_Client + Affiliation BU",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resume message + Reponse_Client + Affiliation BU": {
+      "main": [
+        [
+          {
+            "node": "Stage de formatage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stage de formatage": {
+      "main": [
+        [
+          {
+            "node": "Ajout reclamation a la BD",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Reponse au Client",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Stage de formatage1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ajout reclamation a la BD": {
+      "main": [
+        []
+      ]
+    },
+    "Stage de formatage1": {
+      "main": [
+        [
+          {
+            "node": "Notification Resp BU",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "ccab2806-5a8a-4f03-a46a-97777bf7b815",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "11b5517aac40c6bed922d633a7c232f3d2e6037ad10220789c986f8c2c6064b4"
+  },
+  "id": "ewPj8GYQJ1ce5MjR",
+  "tags": []
+}
